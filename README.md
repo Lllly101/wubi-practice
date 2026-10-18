@@ -2,6 +2,9 @@
 
 一个零依赖的单文件五笔字根训练应用。直接用浏览器打开 `index.html` 即可使用。
 
+- 仓库：<https://github.com/Lllly101/wubi-practice>
+- 在线使用：<https://lllly101.github.io/wubi-practice/>（若已开启 GitHub Pages）
+
 ## 功能
 
 ### 三种练习模式
