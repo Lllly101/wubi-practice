@@ -1,0 +1,1775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>五笔字根 · 分区练习 + 计时</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .app {
+            max-width: 860px;
+            width: 100%;
+            background: white;
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 30px 28px 34px;
+        }
+
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 600;
+            color: #1a1a2e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            font-weight: 400;
+            background: #e9ecef;
+            color: #2d3e50;
+            padding: 6px 12px;
+            border-radius: 100px;
+        }
+
+        .subhead {
+            color: #5a6a7a;
+            margin-bottom: 22px;
+            font-size: 0.98rem;
+            border-left: 4px solid #3b7cbf;
+            padding-left: 16px;
+        }
+
+        /* ===== 时间面板 ===== */
+        .time-panel {
+            background: linear-gradient(135deg, #1e3c5c 0%, #2d5a80 100%);
+            border-radius: 24px;
+            padding: 20px 22px 18px;
+            margin-bottom: 22px;
+            color: white;
+            box-shadow: 0 12px 24px -10px rgba(30, 60, 92, 0.4);
+            transition: background 0.3s;
+        }
+
+        .time-panel.idle {
+            background: linear-gradient(135deg, #5c4a1e 0%, #806a2d 100%);
+        }
+
+        .time-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            font-size: 0.9rem;
+            opacity: 0.9;
+            letter-spacing: 0.4px;
+        }
+
+        .timer-state {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 4px 12px;
+            border-radius: 40px;
+        }
+
+        .timer-state .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #7dffb0;
+            animation: pulse 1.6s infinite;
+        }
+
+        .timer-state.paused .dot { background: #ffb84d; animation: none; }
+        .timer-state.idle .dot { background: #ffb84d; animation: pulse 2.4s infinite; }
+        .timer-state.stopped .dot { background: #9aa6b3; animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .time-cell {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 12px 14px;
+        }
+
+        .time-cell .cell-label {
+            font-size: 0.72rem;
+            opacity: 0.75;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 6px;
+        }
+
+        .time-cell .cell-value {
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            line-height: 1.1;
+        }
+
+        .time-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .time-btn {
+            background: rgba(255, 255, 255, 0.16);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 40px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-btn:hover { background: rgba(255, 255, 255, 0.26); }
+
+        .time-btn.ghost {
+            background: transparent;
+            border-color: rgba(255, 255, 255, 0.18);
+            margin-left: auto;
+            font-size: 0.78rem;
+            opacity: 0.75;
+        }
+
+        .time-btn.ghost:hover { background: rgba(255, 255, 255, 0.1); opacity: 1; }
+
+        .week-chart {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 6px;
+            padding: 10px 6px 0;
+            margin-top: 4px;
+        }
+
+        .week-day {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        .week-bar-wrap {
+            height: 64px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .week-bar {
+            width: 62%;
+            max-width: 22px;
+            background: linear-gradient(180deg, #8ec5f0, #5a9fd4);
+            border-radius: 6px 6px 3px 3px;
+            transition: height 0.4s ease;
+            min-height: 2px;
+        }
+
+        .week-day.today .week-bar {
+            background: linear-gradient(180deg, #ffd166, #f0a830);
+            box-shadow: 0 0 10px rgba(255, 200, 80, 0.5);
+        }
+
+        .week-label { font-size: 0.72rem; color: rgba(255, 255, 255, 0.6); }
+        .week-day.today .week-label { color: #ffd166; font-weight: 700; }
+
+        .week-value {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.5);
+            font-family: 'Courier New', monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        .week-day.today .week-value { color: rgba(255, 255, 255, 0.9); }
+
+        /* ===== 区域 / 模式 / 题目 ===== */
+        .zone-section {
+            margin-bottom: 20px;
+            background: #f8fafd;
+            border-radius: 20px;
+            padding: 14px 16px;
+            border: 1px solid #dbe4ed;
+        }
+
+        .zone-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            color: #2d4f6e;
+            font-weight: 500;
+        }
+
+        .zone-header .hint { font-weight: 400; color: #7a8b9f; font-size: 0.85rem; }
+
+        .zone-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+
+        .zone-btn {
+            padding: 10px 18px;
+            border-radius: 40px;
+            border: 2px solid #cbdae9;
+            background: white;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #2d4f6e;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .zone-btn .zone-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 4px;
+            background: #8fa9c2;
+            transition: 0.15s;
+        }
+
+        .zone-btn[data-zone="1"] .zone-dot { background: #e6a03c; }
+        .zone-btn[data-zone="2"] .zone-dot { background: #5fa87a; }
+        .zone-btn[data-zone="3"] .zone-dot { background: #c45a5a; }
+        .zone-btn[data-zone="4"] .zone-dot { background: #b47ac6; }
+        .zone-btn[data-zone="5"] .zone-dot { background: #6a7f9e; }
+
+        .zone-btn.active {
+            border-color: #1e3c5c;
+            background: #e9f0f9;
+            box-shadow: 0 2px 8px rgba(30, 60, 92, 0.15);
+            font-weight: 600;
+        }
+
+        .zone-btn.active .zone-dot {
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #1e3c5c;
+        }
+
+        .mode-switch {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 22px;
+            background: #f1f4f8;
+            padding: 6px;
+            border-radius: 60px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 12px 10px;
+            border: none;
+            background: transparent;
+            font-size: 1rem;
+            font-weight: 500;
+            border-radius: 40px;
+            cursor: pointer;
+            color: #4a5a6a;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mode-btn.active {
+            background: white;
+            color: #1e3c5c;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            font-weight: 600;
+        }
+
+        .mode-btn i { font-style: normal; font-size: 1.2rem; }
+
+        .quiz-area {
+            background: #f9fbfd;
+            border-radius: 28px;
+            padding: 28px 20px 24px;
+            margin-bottom: 20px;
+            border: 1px solid #dbe4ed;
+            box-shadow: inset 0 1px 4px rgba(255, 255, 255, 0.8), 0 6px 12px -8px rgba(0, 0, 0, 0.1);
+        }
+
+        .prompt-label {
+            text-align: center;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6f7e8f;
+            margin-bottom: 12px;
+        }
+
+        .prompt-content {
+            font-size: 5rem;
+            font-weight: 700;
+            line-height: 1.2;
+            text-align: center;
+            color: #0b2a41;
+            margin-bottom: 8px;
+            word-break: break-word;
+            font-family: 'Courier New', 'Noto Sans SC', monospace;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 4px;
+        }
+
+        .hint { text-align: center; color: #7f8fa0; font-size: 0.9rem; min-height: 22px; }
+
+        .input-area {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .input-area input {
+            flex: 1;
+            padding: 18px 22px;
+            font-size: 1.6rem;
+            border: 2px solid #cfddee;
+            border-radius: 20px;
+            background: white;
+            outline: none;
+            transition: 0.15s;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            color: #0f2e44;
+            text-transform: uppercase;
+        }
+
+        .input-area input:focus {
+            border-color: #3b7cbf;
+            box-shadow: 0 0 0 4px rgba(59, 124, 191, 0.15);
+        }
+
+        .input-area input.correct { border-color: #2e9a6e; background: #e9f7f1; }
+        .input-area input.wrong { border-color: #d44c4c; background: #fef0f0; }
+
+        .btn {
+            background: #1e3c5c;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 18px 28px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 100px;
+            box-shadow: 0 6px 0 #0b1e2e;
+        }
+
+        .btn:hover { background: #234f77; }
+        .btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #0b1e2e; }
+
+        .btn.secondary { background: #e2e9f2; color: #1e3c5c; box-shadow: 0 6px 0 #b8c9db; }
+        .btn.secondary:hover { background: #d2ddec; }
+        .btn.secondary:active { box-shadow: 0 3px 0 #b8c9db; }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 16px 20px;
+            border-radius: 60px;
+            font-weight: 500;
+            text-align: center;
+            font-size: 1.05rem;
+            transition: 0.15s;
+            background: #f1f6fc;
+            color: #2d4f6e;
+            min-height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .feedback.correct { background: #dff0e8; color: #1b6e4b; }
+        .feedback.wrong { background: #ffe6e6; color: #b33b3b; }
+
+        /* ===== 悬浮口诀小助手 ===== */
+        .algo-fab {
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #f0c14b, #d9a520);
+            color: #fff;
+            font-size: 1.6rem;
+            cursor: pointer;
+            box-shadow: 0 8px 20px -4px rgba(180, 140, 20, 0.6);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.15s, box-shadow 0.15s;
+            animation: fabPulse 2.6s ease-in-out infinite;
+            touch-action: none;
+        }
+
+        .algo-fab:hover { transform: scale(1.08); animation: none; }
+        .algo-fab:active { transform: scale(0.96); }
+
+        @keyframes fabPulse {
+            0%, 100% { box-shadow: 0 8px 20px -4px rgba(180, 140, 20, 0.6); }
+            50% { box-shadow: 0 8px 26px 2px rgba(217, 165, 32, 0.5); }
+        }
+
+        .algo-card {
+            position: fixed;
+            right: 24px;
+            bottom: 94px;
+            width: 380px;
+            max-width: calc(100vw - 32px);
+            max-height: min(72vh, 640px);
+            background: #fffdf3;
+            border: 1px solid #ecdca6;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px -12px rgba(60, 45, 0, 0.4);
+            z-index: 1001;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .algo-card.open {
+            display: flex;
+            animation: cardIn 0.18s ease-out;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(8px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .algo-card-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 14px;
+            background: linear-gradient(135deg, #f7e9b8, #eeda92);
+            cursor: grab;
+            user-select: none;
+            border-bottom: 1px solid #ecdca6;
+            flex-shrink: 0;
+        }
+
+        .algo-card-head:active { cursor: grabbing; }
+
+        .algo-card-head .algo-card-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #6d5512;
+            flex: 1;
+        }
+
+        .algo-card-head .algo-close {
+            border: none;
+            background: rgba(255, 255, 255, 0.5);
+            color: #6d5512;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
+        .algo-card-head .algo-close:hover { background: rgba(255, 255, 255, 0.9); }
+
+        .algo-card-body {
+            padding: 14px 16px 18px;
+            overflow-y: auto;
+        }
+
+        .algo-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #8a6d1f;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .algo-title:not(:first-child) {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px dashed #e4d49a;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+        }
+
+        .algo-title .algo-fold-arrow {
+            font-size: 0.75rem;
+            color: #b79a3c;
+            transition: transform 0.2s;
+        }
+
+        .algo-title.collapsed .algo-fold-arrow { transform: rotate(-90deg); }
+
+        .algo-body {
+            font-family: 'Noto Sans SC', 'Courier New', monospace;
+            font-size: 1.05rem;
+            line-height: 1.9;
+            color: #4a3a10;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 0;
+        }
+
+        /* 分区对照 */
+        .algo-zones { display: flex; flex-direction: column; gap: 12px; }
+        .algo-zones.hidden { display: none; }
+
+        .algo-zone {
+            border-left: 4px solid #c9b76a;
+            padding-left: 12px;
+        }
+
+        .algo-zone-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: #6d5512;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .algo-zone-name .zone-tag {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #fff;
+            background: #b79a3c;
+            border-radius: 100px;
+            padding: 1px 8px;
+        }
+
+        .algo-zone-lines {
+            font-family: 'Noto Sans SC', 'Courier New', monospace;
+            font-size: 0.98rem;
+            line-height: 1.85;
+            color: #4a3a10;
+        }
+
+        .algo-zone-lines .algo-key {
+            display: inline-block;
+            min-width: 2.4em;
+            font-weight: 700;
+            color: #1e3c5c;
+        }
+
+        /* ===== 错题本 ===== */
+        .weak-panel {
+            display: none;
+            margin-top: 16px;
+            background: #fff5f5;
+            border: 1px solid #f2c9c9;
+            border-radius: 18px;
+            padding: 14px 16px;
+        }
+
+        .weak-panel.show { display: block; }
+
+        .weak-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #b33b3b;
+            margin-bottom: 10px;
+        }
+
+        .weak-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+        .weak-chip {
+            background: white;
+            border: 1px solid #eab6b6;
+            color: #a33;
+            padding: 5px 12px;
+            border-radius: 40px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: default;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 18px;
+            color: #5e7184;
+            font-size: 0.95rem;
+            font-weight: 500;
+            padding: 0 8px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .stats span {
+            background: #ecf2f9;
+            padding: 6px 16px;
+            border-radius: 40px;
+        }
+
+        .footer {
+            margin-top: 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .footer .btn.secondary, .footer .btn.primary { flex: 1; }
+
+        @media (max-width: 620px) {
+            .app { padding: 22px 16px 28px; }
+            .time-grid { grid-template-columns: 1fr; gap: 8px; }
+            .time-cell { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; }
+            .time-cell .cell-label { margin-bottom: 0; }
+            .time-cell .cell-value { font-size: 1.3rem; }
+            .prompt-content { font-size: 3.8rem; min-height: 90px; }
+            .input-area { flex-direction: column; }
+            .btn { width: 100%; padding: 16px; }
+            .input-area input { width: 100%; font-size: 1.4rem; padding: 16px; text-align: center; }
+            .mode-btn { font-size: 0.9rem; padding: 10px; }
+            .zone-btn { padding: 8px 14px; font-size: 0.85rem; }
+            .footer { flex-direction: column; }
+            .stats { justify-content: center; }
+            .week-value { font-size: 0.58rem; }
+
+            /* 悬浮助手：移动端变小、卡片贴底 */
+            .algo-fab { right: 14px; bottom: 14px; width: 50px; height: 50px; font-size: 1.35rem; }
+            .algo-card {
+                right: 0;
+                left: 0 !important;
+                top: auto !important;
+                bottom: 0 !important;
+                width: 100%;
+                max-width: 100%;
+                max-height: 68vh;
+                border-radius: 20px 20px 0 0;
+            }
+            .algo-card-head { cursor: default; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <h1>
+            ⌨️ 五笔字根练习
+            <span class="badge">分区训练 · 计时</span>
+        </h1>
+        <div class="subhead">选择区域 · 双向练习 · 自动记录练习时长</div>
+
+        <!-- 时间面板 -->
+        <div class="time-panel" id="timePanel">
+            <div class="time-header">
+                <span>⏱ 练习时长统计</span>
+                <span class="timer-state stopped" id="timerState">
+                    <span class="dot"></span>
+                    <span id="timerStateText">等待开始</span>
+                </span>
+            </div>
+
+            <div class="time-grid">
+                <div class="time-cell">
+                    <div class="cell-label">本次练习</div>
+                    <div class="cell-value" id="sessionTime">00:00:00</div>
+                </div>
+                <div class="time-cell">
+                    <div class="cell-label">今日累计</div>
+                    <div class="cell-value" id="todayTime">00:00:00</div>
+                </div>
+                <div class="time-cell">
+                    <div class="cell-label">本周累计</div>
+                    <div class="cell-value" id="weekTime">00:00:00</div>
+                </div>
+            </div>
+
+            <div class="week-chart" id="weekChart"></div>
+
+            <div class="time-actions" style="margin-top:14px;">
+                <button class="time-btn" id="pauseBtn">
+                    <span id="pauseIcon">▶</span>
+                    <span id="pauseText">开始计时</span>
+                </button>
+                <button class="time-btn ghost" id="clearTimeBtn" title="清空所有练习时间记录">
+                    🗑 清空记录
+                </button>
+            </div>
+        </div>
+
+        <!-- 区域选择 -->
+        <div class="zone-section">
+            <div class="zone-header">
+                <span>📌 练习区域（可多选）</span>
+                <span class="hint">点击切换</span>
+            </div>
+            <div class="zone-buttons" id="zoneButtons">
+                <button class="zone-btn active" data-zone="1"><span class="zone-dot"></span> 1区 · 横</button>
+                <button class="zone-btn active" data-zone="2"><span class="zone-dot"></span> 2区 · 竖</button>
+                <button class="zone-btn active" data-zone="3"><span class="zone-dot"></span> 3区 · 撇</button>
+                <button class="zone-btn active" data-zone="4"><span class="zone-dot"></span> 4区 · 捺</button>
+                <button class="zone-btn active" data-zone="5"><span class="zone-dot"></span> 5区 · 折</button>
+            </div>
+        </div>
+
+        <!-- 模式切换 -->
+        <div class="mode-switch">
+            <button class="mode-btn active" data-mode="rootToKey"><i>🔤</i> 字根 → 字母</button>
+            <button class="mode-btn" data-mode="keyToRoot"><i>🔠</i> 字母 → 字根</button>
+            <button class="mode-btn" data-mode="typeChar"><i>⌨️</i> 拆字打字</button>
+        </div>
+
+        <!-- 题目区域 -->
+        <div class="quiz-area">
+            <div class="prompt-label" id="promptLabel">请打出对应的字母</div>
+            <div class="prompt-content" id="promptContent">木</div>
+            <div class="hint" id="hintText"></div>
+        </div>
+
+        <!-- 悬浮口诀小助手 -->
+        <button class="algo-fab" id="algoFab" type="button" title="口诀助手">💡</button>
+        <div class="algo-card" id="algoPanel">
+            <div class="algo-card-head" id="algoCardHead">
+                <span class="algo-card-title">💡 五笔口诀助手</span>
+                <button class="algo-close" id="algoCloseBtn" type="button" title="关闭">✕</button>
+            </div>
+            <div class="algo-card-body">
+                <div class="algo-title">本题口诀</div>
+                <pre class="algo-body" id="algoBody"></pre>
+                <div class="algo-title" id="algoZonesTitle">
+                    <span>五笔字根助记口诀 · 分区对照</span>
+                    <span class="algo-fold-arrow">▾</span>
+                </div>
+                <div class="algo-zones" id="algoZones"></div>
+            </div>
+        </div>
+
+        <!-- 弱点 / 错题本 -->
+        <div class="weak-panel" id="weakPanel">
+            <div class="weak-title">📕 错题本（优先重练，答对逐步移除）</div>
+            <div class="weak-list" id="weakList"></div>
+        </div>
+
+        <!-- 输入 -->
+        <div class="input-area">
+            <input type="text" id="answerInput" placeholder="输入..." autocomplete="off" autofocus>
+            <button class="btn" id="submitBtn">↵ 提交</button>
+        </div>
+
+        <div class="feedback" id="feedback">输入后按回车或点击提交</div>
+
+        <div class="stats">
+            <span>✅ 正确 <span id="correctCount">0</span></span>
+            <span>❌ 错误 <span id="wrongCount">0</span></span>
+            <span>🎯 正确率 <span id="accuracy">0%</span></span>
+        </div>
+
+        <div class="footer">
+            <button class="btn secondary" id="nextBtn">⏭ 跳过 / 下一题</button>
+            <button class="btn primary" id="resetStatsBtn">🔄 重置统计</button>
+        </div>
+    </div>
+
+    <script>
+        (function(){
+            // ============================================================
+            //  字根数据
+            // ============================================================
+            // 每个键：roots=全部字根（含变体/形近根），algo=助记口诀，key=所在键
+            const ZONE_DATA = {
+                1: { name: '横区', keys: ['G','F','D','S','A'], keyToRoots: {
+                    'G': { roots: ['王','旁','一','五','戋','丬'], algo: '王旁青头戋（兼）五一' },
+                    'F': { roots: ['土','士','二','干','十','寸','雨','革'], algo: '土士二干十寸雨' },
+                    'D': { roots: ['大','犬','三','羊','古','石','厂','丆','长','镸'], algo: '大犬三羊古石厂' },
+                    'S': { roots: ['木','丁','西','覀'], algo: '木丁西' },
+                    'A': { roots: ['工','戈','弋','艹','廾','匚','七'], algo: '工戈草头右框七' } } },
+                2: { name: '竖区', keys: ['H','J','K','L','M'], keyToRoots: {
+                    'H': { roots: ['目','上','止','卜','虍','丨','具','皮','且'], algo: '目具上止卜虎皮' },
+                    'J': { roots: ['日','曰','早','虫','刂','两'], algo: '日早两竖与虫依' },
+                    'K': { roots: ['口','川','卄'], algo: '口与川，字根稀' },
+                    'L': { roots: ['田','甲','囗','四','车','力','黑','罒'], algo: '田甲方框四车力' },
+                    'M': { roots: ['山','由','贝','冂','几','骨'], algo: '山由贝，下框几' } } },
+                3: { name: '撇区', keys: ['T','R','E','W','Q'], keyToRoots: {
+                    'T': { roots: ['禾','竹','丿','彳','攵','夂'], algo: '禾竹一撇双人立，反文条头共三一' },
+                    'R': { roots: ['白','手','扌','斤','厂'], algo: '白手看头三二斤' },
+                    'E': { roots: ['月','彡','乃','用','豕','衣','舟','𧘇'], algo: '月彡（衫）乃用家衣底' },
+                    'W': { roots: ['人','八','亻','癶','𠆢'], algo: '人和八，三四里' },
+                    'Q': { roots: ['金','钅','儿','夕','勹','犬','鱼','犭'], algo: '金勺缺点无尾鱼，犬旁留儿一点夕，氏无七（妻）' } } },
+                4: { name: '捺区', keys: ['Y','U','I','O','P'], keyToRoots: {
+                    'Y': { roots: ['言','讠','文','方','广','丶','亠','㇏'], algo: '言文方广在四一，高头一捺谁人去' },
+                    'U': { roots: ['立','辛','门','丬','六','疒','丷','冫'], algo: '立辛两点六门疒（病）' },
+                    'I': { roots: ['水','氵','小','⺌','⺍'], algo: '水旁兴头小倒立' },
+                    'O': { roots: ['火','灬','米','业'], algo: '火业头，四点米' },
+                    'P': { roots: ['之','辶','廴','宀','冖','礻','衤'], algo: '之宝盖，摘礻（示）衤（衣）' } } },
+                5: { name: '折区', keys: ['N','B','V','C','X'], keyToRoots: {
+                    'N': { roots: ['已','己','巳','尸','心','忄','羽','乙','⺗'], algo: '已半巳满不出己，左框折尸心和羽' },
+                    'B': { roots: ['子','孑','耳','阝','卩','了','也','凵','乚'], algo: '子耳了也框向上' },
+                    'V': { roots: ['女','刀','九','巛','彐','臼'], algo: '女刀九臼山朝西' },
+                    'C': { roots: ['又','巴','马','厶','マ','ス'], algo: '又巴马，丢失矣' },
+                    'X': { roots: ['纟','幺','丝','弓','匕','匚','母','丂'], algo: '慈母无心弓和匕，幼无力' } } }
+            };
+
+            // 助记词显示辅助：按五笔分区排版口诀
+            const ZONE_CN = { 1: '一区', 2: '二区', 3: '三区', 4: '四区', 5: '五区' };
+            const ALGO_ORDER = [
+                { zone: 1, name: '横区（G F D S A）', lines: ['11 G 王旁青头戋（兼）五一', '12 F 土士二干十寸雨', '13 D 大犬三羊古石厂', '14 S 木丁西', '15 A 工戈草头右框七'] },
+                { zone: 2, name: '竖区（H J K L M）', lines: ['21 H 目具上止卜虎皮', '22 J 日早两竖与虫依', '23 K 口与川，字根稀', '24 L 田甲方框四车力', '25 M 山由贝，下框几'] },
+                { zone: 3, name: '撇区（T R E W Q）', lines: ['31 T 禾竹一撇双人立，反文条头共三一', '32 R 白手看头三二斤', '33 E 月彡（衫）乃用家衣底', '34 W 人和八，三四里', '35 Q 金勺缺点无尾鱼，犬旁留儿一点夕，氏无七（妻）'] },
+                { zone: 4, name: '捺区（Y U I O P）', lines: ['41 Y 言文方广在四一，高头一捺谁人去', '42 U 立辛两点六门疒（病）', '43 I 水旁兴头小倒立', '44 O 火业头，四点米', '45 P 之宝盖，摘礻（示）衤（衣）'] },
+                { zone: 5, name: '折区（N B V C X）', lines: ['51 N 已半巳满不出己，左框折尸心和羽', '52 B 子耳了也框向上', '53 V 女刀九臼山朝西', '54 C 又巴马，丢失矣', '55 X 慈母无心弓和匕，幼无力'] }
+            ];
+            // 键 -> 分区中文名
+            function zoneLabel(key) {
+                const z = KEY_TO_ZONE[key];
+                if (!z) return '';
+                const short = ZONE_DATA[z] ? ZONE_DATA[z].name.replace(/区$/, '') : '';
+                return `${ZONE_CN[z]} · ${short}`;
+            }
+
+            // 一个字根可能同时属于多个键（如“匚”属 A 又属 X，“厂”属 D 又属 R）
+            const ROOT_TO_KEYS = {};   // 字根 -> [键...]
+            const KEY_TO_ZONE = {};    // 键 -> 区
+            const KEY_INFO = {};       // 键 -> { roots, algo, zone }
+            const ALL_KEYS = [];
+            for (const [zoneStr, zoneData] of Object.entries(ZONE_DATA)) {
+                const zone = parseInt(zoneStr);
+                for (const key of zoneData.keys) {
+                    KEY_TO_ZONE[key] = zone;
+                    ALL_KEYS.push(key);
+                    const info = zoneData.keyToRoots[key];
+                    KEY_INFO[key] = { roots: info.roots, algo: info.algo, zone };
+                    for (const root of info.roots) {
+                        if (!ROOT_TO_KEYS[root]) ROOT_TO_KEYS[root] = [];
+                        if (!ROOT_TO_KEYS[root].includes(key)) ROOT_TO_KEYS[root].push(key);
+                    }
+                }
+            }
+            const ALL_ROOTS = Object.keys(ROOT_TO_KEYS);
+            // 取字根的主键（用于展示与提示）
+            function primaryKeyOfRoot(root) { return (ROOT_TO_KEYS[root] || [])[0]; }
+            function keysOfRoot(root) { return ROOT_TO_KEYS[root] || []; }
+            // 键位对应的全部字根（用于“字母->字根”判分）
+            function rootsOfKey(key) { return (KEY_INFO[key] && KEY_INFO[key].roots) || []; }
+            // 汇总某区内所有键的助记口诀
+            function algoForKeys(keys) {
+                return keys.map(k => `${k}  ${KEY_INFO[k] ? KEY_INFO[k].algo : ''}`).join('\n');
+            }
+
+            // ============================================================
+            //  拆字打字题库（汉字 -> 按笔顺的字根键序列）
+            //  注：为入门练习，采用字根拆分到键位；一词多键时任一键均算对
+            // ============================================================
+            const CHAR_DATA = [
+                { ch: '好', keys: 'VB' }, { ch: '你', keys: 'WQ' }, { ch: '们', keys: 'WU' },
+                { ch: '我', keys: 'TR' }, { ch: '他', keys: 'WB' }, { ch: '她', keys: 'VB' },
+                { ch: '明', keys: 'JE' }, { ch: '早', keys: 'JH' }, { ch: '是', keys: 'J' },
+                { ch: '日', keys: 'J' }, { ch: '月', keys: 'E' }, { ch: '水', keys: 'I' },
+                { ch: '火', keys: 'O' }, { ch: '山', keys: 'M' }, { ch: '石', keys: 'D' },
+                { ch: '土', keys: 'F' }, { ch: '木', keys: 'S' }, { ch: '金', keys: 'Q' },
+                { ch: '王', keys: 'G' }, { ch: '白', keys: 'R' }, { ch: '人', keys: 'W' },
+                { ch: '口', keys: 'K' }, { ch: '田', keys: 'L' }, { ch: '工', keys: 'A' },
+                { ch: '子', keys: 'B' }, { ch: '女', keys: 'V' }, { ch: '又', keys: 'C' },
+                { ch: '彐', keys: 'V' }, { ch: '林', keys: 'SS' }, { ch: '朋', keys: 'EE' },
+                { ch: '昌', keys: 'JJ' }, { ch: '多', keys: 'QQ' }, { ch: '从', keys: 'WW' },
+                { ch: '众', keys: 'WWW' }, { ch: '森', keys: 'SSS' }, { ch: '品', keys: 'KKK' },
+                { ch: '炎', keys: 'OO' }, { ch: '圭', keys: 'FF' }, { ch: '㐅', keys: 'QQ' },
+                { ch: '打', keys: 'RS' }, { ch: '找', keys: 'RA' }, { ch: '理', keys: 'GJ' },
+                { ch: '情', keys: 'NG' }, { ch: '清', keys: 'IG' }, { ch: '请', keys: 'YG' },
+                { ch: '话', keys: 'YT' }, { ch: '说', keys: 'YU' }, { ch: '读', keys: 'YF' },
+                { ch: '江', keys: 'IA' }, { ch: '河', keys: 'IS' }, { ch: '海', keys: 'IT' },
+                { ch: '时', keys: 'JF' }, { ch: '同', keys: 'M' }, { ch: '如', keys: 'VK' },
+                { ch: '安', keys: 'PV' }, { ch: '家', keys: 'PE' }, { ch: '字', keys: 'PB' },
+                { ch: '学', keys: 'IP' }, { ch: '国', keys: 'L' }, { ch: '中', keys: 'K' }
+            ];
+
+            function getAvailableChars() {
+                // 只保留其键序列全部落在所选区内的字
+                return CHAR_DATA.filter(item =>
+                    [...item.keys].every(k => selectedZones.has(KEY_TO_ZONE[k]))
+                );
+            }
+
+            // ============================================================
+            //  时间跟踪模块（空闲 30 秒自动暂停）
+            // ============================================================
+            const STORAGE_KEY = 'wubi_practice_time_v1';
+            const KEEP_DAYS = 90;
+            // ★ 空闲超时：30 秒无操作自动暂停
+            // 想改成 1 分钟，把下面改成 60 * 1000
+            const IDLE_TIMEOUT_MS = 30 * 1000;
+
+            function formatDateKey(d) {
+                return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+            }
+            function getTodayKey() { return formatDateKey(new Date()); }
+
+            function loadRecord() {
+                try {
+                    const raw = localStorage.getItem(STORAGE_KEY);
+                    if (!raw) return {};
+                    const parsed = JSON.parse(raw);
+                    return (typeof parsed === 'object' && parsed !== null) ? parsed : {};
+                } catch (e) { return {}; }
+            }
+            function saveRecord(record) {
+                try { localStorage.setItem(STORAGE_KEY, JSON.stringify(record)); }
+                catch (e) { console.warn('无法保存时间记录:', e); }
+            }
+            function pruneOldRecords() {
+                const record = loadRecord();
+                const cutoff = new Date();
+                cutoff.setDate(cutoff.getDate() - KEEP_DAYS);
+                const cutoffKey = formatDateKey(cutoff);
+                let changed = false;
+                for (const key of Object.keys(record)) {
+                    if (key < cutoffKey) { delete record[key]; changed = true; }
+                }
+                if (changed) saveRecord(record);
+            }
+            function getWeekStart() {
+                const d = new Date();
+                d.setHours(0,0,0,0);
+                const day = d.getDay();
+                const diff = day === 0 ? 6 : day - 1;
+                d.setDate(d.getDate() - diff);
+                return d;
+            }
+            function getTotalForRange(startDate, endDate) {
+                const record = loadRecord();
+                let total = 0;
+                const cur = new Date(startDate); cur.setHours(0,0,0,0);
+                const end = new Date(endDate); end.setHours(0,0,0,0);
+                while (cur <= end) {
+                    total += record[formatDateKey(cur)] || 0;
+                    cur.setDate(cur.getDate() + 1);
+                }
+                return total;
+            }
+
+            // ---- 状态 ----
+            let sessionSeconds = 0;
+            let pendingSeconds = 0;
+            let pendingDate = null;
+            let hasStarted = false;
+            let timerRunning = false;
+
+            // 暂停原因（互不干扰）
+            let userPaused = false;
+            let idlePaused = false;
+            let hiddenPaused = false;
+
+            // 上次活动时间
+            let lastActivityTime = Date.now();
+            let tickInterval = null;
+
+            // ---- DOM ----
+            const timePanel = document.getElementById('timePanel');
+            const sessionTimeEl = document.getElementById('sessionTime');
+            const todayTimeEl = document.getElementById('todayTime');
+            const weekTimeEl = document.getElementById('weekTime');
+            const weekChartEl = document.getElementById('weekChart');
+            const timerStateEl = document.getElementById('timerState');
+            const timerStateTextEl = document.getElementById('timerStateText');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const pauseIcon = document.getElementById('pauseIcon');
+            const pauseText = document.getElementById('pauseText');
+            const clearTimeBtn = document.getElementById('clearTimeBtn');
+
+            function formatTime(sec) {
+                sec = Math.max(0, Math.floor(sec));
+                const h = Math.floor(sec / 3600);
+                const m = Math.floor((sec % 3600) / 60);
+                const s = sec % 60;
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            }
+            function formatShortTime(sec) {
+                sec = Math.max(0, Math.floor(sec));
+                if (sec < 60) return sec + '秒';
+                const m = Math.floor(sec / 60);
+                const s = sec % 60;
+                if (m < 60) return s > 0 ? `${m}分${s}秒` : `${m}分`;
+                const h = Math.floor(m / 60);
+                const mm = m % 60;
+                return mm > 0 ? `${h}时${mm}分` : `${h}时`;
+            }
+
+            function flushToStorage(dateKey) {
+                if (pendingSeconds <= 0) return;
+                const key = dateKey || pendingDate || getTodayKey();
+                const record = loadRecord();
+                record[key] = (record[key] || 0) + pendingSeconds;
+                saveRecord(record);
+                pendingSeconds = 0;
+                pendingDate = key;
+                renderWeekChart();
+            }
+
+            function recomputeRunning() {
+                timerRunning = hasStarted && !userPaused && !idlePaused && !hiddenPaused;
+                updateTimerUI();
+                renderTimePanel();
+            }
+
+            function tick() {
+                if (!timerRunning) return;
+
+                // 检查空闲超时
+                if (Date.now() - lastActivityTime > IDLE_TIMEOUT_MS) {
+                    idlePaused = true;
+                    flushToStorage(pendingDate);
+                    recomputeRunning();
+                    return;
+                }
+
+                const todayKey = getTodayKey();
+                if (pendingDate === null) {
+                    pendingDate = todayKey;
+                } else if (pendingDate !== todayKey) {
+                    flushToStorage(pendingDate);
+                    pendingDate = todayKey;
+                }
+
+                sessionSeconds++;
+                pendingSeconds++;
+
+                renderTimePanel();
+
+                if (pendingSeconds >= 5) flushToStorage(pendingDate);
+            }
+
+            function renderTimePanel() {
+                sessionTimeEl.textContent = formatTime(sessionSeconds);
+
+                const record = loadRecord();
+                const todayKey = getTodayKey();
+                const todayTotal = (record[todayKey] || 0) + (pendingDate === todayKey ? pendingSeconds : 0);
+                todayTimeEl.textContent = formatTime(todayTotal);
+
+                const weekStart = getWeekStart();
+                const weekTotal = getTotalForRange(weekStart, new Date())
+                    + (pendingDate && pendingDate >= formatDateKey(weekStart) ? pendingSeconds : 0);
+                weekTimeEl.textContent = formatTime(weekTotal);
+            }
+
+            function renderWeekChart() {
+                const record = loadRecord();
+                const weekStart = getWeekStart();
+                const todayKey = getTodayKey();
+                const dayNames = ['一','二','三','四','五','六','日'];
+
+                const days = [];
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date(weekStart);
+                    d.setDate(weekStart.getDate() + i);
+                    const key = formatDateKey(d);
+                    let sec = record[key] || 0;
+                    if (key === todayKey && pendingDate === todayKey) sec += pendingSeconds;
+                    days.push({ key, dayName: dayNames[i], seconds: sec, isToday: key === todayKey });
+                }
+
+                const maxSec = Math.max(60, ...days.map(d => d.seconds));
+                const maxHeight = 64;
+
+                weekChartEl.innerHTML = days.map(d => {
+                    const heightPx = d.seconds > 0
+                        ? Math.max(4, Math.round((d.seconds / maxSec) * maxHeight))
+                        : 2;
+                    return `<div class="week-day ${d.isToday ? 'today' : ''}">
+                        <div class="week-bar-wrap">
+                            <div class="week-bar" style="height:${heightPx}px" title="${formatTime(d.seconds)}"></div>
+                        </div>
+                        <div class="week-label">${d.dayName}</div>
+                        <div class="week-value">${d.seconds > 0 ? formatShortTime(d.seconds) : '—'}</div>
+                    </div>`;
+                }).join('');
+            }
+
+            function updateTimerUI() {
+                timerStateEl.classList.remove('paused', 'idle', 'stopped');
+                timePanel.classList.remove('idle');
+
+                if (!hasStarted) {
+                    timerStateEl.classList.add('stopped');
+                    timerStateTextEl.textContent = '等待开始';
+                    pauseIcon.textContent = '▶';
+                    pauseText.textContent = '开始计时';
+                } else if (idlePaused) {
+                    timerStateEl.classList.add('idle');
+                    timePanel.classList.add('idle');
+                    timerStateTextEl.textContent = '空闲暂停 · 继续操作恢复';
+                    pauseIcon.textContent = '▶';
+                    pauseText.textContent = '继续';
+                } else if (hiddenPaused) {
+                    timerStateEl.classList.add('paused');
+                    timerStateTextEl.textContent = '已暂停（离开页面）';
+                    pauseIcon.textContent = '▶';
+                    pauseText.textContent = '继续';
+                } else if (userPaused) {
+                    timerStateEl.classList.add('paused');
+                    timerStateTextEl.textContent = '已暂停';
+                    pauseIcon.textContent = '▶';
+                    pauseText.textContent = '继续';
+                } else {
+                    timerStateTextEl.textContent = '计时中';
+                    pauseIcon.textContent = '⏸';
+                    pauseText.textContent = '暂停';
+                }
+            }
+
+            function ensureStarted() {
+                if (!hasStarted) {
+                    hasStarted = true;
+                    userPaused = false;
+                    idlePaused = false;
+                    hiddenPaused = false;
+                    pendingDate = getTodayKey();
+                    lastActivityTime = Date.now();
+                    recomputeRunning();
+                }
+            }
+
+            function toggleTimer() {
+                if (!hasStarted) {
+                    hasStarted = true;
+                    userPaused = false;
+                    idlePaused = false;
+                    hiddenPaused = false;
+                    pendingDate = getTodayKey();
+                    lastActivityTime = Date.now();
+                } else {
+                    userPaused = !userPaused;
+                    if (userPaused) flushToStorage(pendingDate);
+                    else lastActivityTime = Date.now();
+                }
+                recomputeRunning();
+            }
+
+            function markActivity() {
+                lastActivityTime = Date.now();
+                // 只有空闲暂停才自动恢复；用户手动暂停/页面隐藏暂停不自动恢复
+                if (idlePaused && !userPaused && !hiddenPaused) {
+                    idlePaused = false;
+                    recomputeRunning();
+                }
+            }
+
+            // 监听用户活动
+            ['keydown', 'mousedown', 'touchstart', 'pointerdown', 'click', 'input']
+                .forEach(evt => document.addEventListener(evt, markActivity, { passive: true }));
+
+            // 页面可见性变化
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    hiddenPaused = true;
+                    flushToStorage(pendingDate);
+                    recomputeRunning();
+                } else {
+                    hiddenPaused = false;
+                    lastActivityTime = Date.now();
+                    recomputeRunning();
+                }
+            });
+
+            // 页面关闭/卸载
+            window.addEventListener('beforeunload', () => {
+                if (pendingSeconds > 0) flushToStorage(pendingDate);
+                timerRunning = false;
+            });
+
+            function startTickLoop() {
+                if (tickInterval) return;
+                tickInterval = setInterval(tick, 1000);
+            }
+
+            // ============================================================
+            //  练习模块
+            // ============================================================
+            let currentMode = 'rootToKey';
+            let selectedZones = new Set([1,2,3,4,5]);
+            let currentQuestion = null;
+            let correctCount = 0;
+            let wrongCount = 0;
+            let answered = false;
+
+            // ============================================================
+            //  错题本 + 间隔重复（简化版）
+            // ============================================================
+            const WRONG_BOOK_KEY = 'wubi_wrong_book_v1';
+            // 结构：{ 字根: 错误次数 }，答对足够多次后移出
+            let wrongBook = new Map();
+
+            function loadWrongBook() {
+                try {
+                    const raw = localStorage.getItem(WRONG_BOOK_KEY);
+                    if (!raw) return new Map();
+                    const obj = JSON.parse(raw);
+                    return new Map(Object.entries(obj || {}));
+                } catch (e) { return new Map(); }
+            }
+            function saveWrongBook() {
+                try {
+                    const obj = {};
+                    wrongBook.forEach((v, k) => { obj[k] = v; });
+                    localStorage.setItem(WRONG_BOOK_KEY, JSON.stringify(obj));
+                } catch (e) { /* ignore */ }
+            }
+            function registerWrong(root) {
+                if (!root) return;
+                wrongBook.set(root, (wrongBook.get(root) || 0) + 1);
+                saveWrongBook();
+            }
+            function registerCorrect(root) {
+                if (!wrongBook.has(root)) return;
+                const n = wrongBook.get(root) - 1;
+                if (n <= 0) wrongBook.delete(root);
+                else wrongBook.set(root, n);
+                saveWrongBook();
+            }
+
+            const promptLabel = document.getElementById('promptLabel');
+            const promptContent = document.getElementById('promptContent');
+            const hintText = document.getElementById('hintText');
+            const answerInput = document.getElementById('answerInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const feedback = document.getElementById('feedback');
+            const correctSpan = document.getElementById('correctCount');
+            const wrongSpan = document.getElementById('wrongCount');
+            const accuracySpan = document.getElementById('accuracy');
+            const nextBtn = document.getElementById('nextBtn');
+            const resetStatsBtn = document.getElementById('resetStatsBtn');
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            const zoneBtns = document.querySelectorAll('.zone-btn');
+            const algoPanel = document.getElementById('algoPanel');
+            const algoBody = document.getElementById('algoBody');
+            const algoFab = document.getElementById('algoFab');
+            const algoCardHead = document.getElementById('algoCardHead');
+            const algoCloseBtn = document.getElementById('algoCloseBtn');
+            const algoZonesTitle = document.getElementById('algoZonesTitle');
+            const algoZonesEl = document.getElementById('algoZones');
+            const weakPanel = document.getElementById('weakPanel');
+            const weakList = document.getElementById('weakList');
+
+            // ---- 悬浮口诀助手（可拖拽 + 记忆位置 + 折叠分区）----
+            const ALGO_POS_KEY = 'wubi_algo_pos_v1';
+            let algoVisible = false;
+            let zonesCollapsed = false;
+
+            function algoTextForCurrent() {
+                if (!currentQuestion) return '—';
+                let keys = [];
+                if (currentQuestion.type === 'char') {
+                    keys = [...currentQuestion.keys];
+                } else if (currentQuestion.type === 'root') {
+                    keys = keysOfRoot(currentQuestion.root);
+                } else {
+                    keys = [currentQuestion.key];
+                }
+                return keys.map(k => {
+                    const zl = zoneLabel(k);
+                    return `【${zl}】${k}  ${KEY_INFO[k] ? KEY_INFO[k].algo : ''}`;
+                }).join('\n');
+            }
+            function renderAlgoZones() {
+                if (!algoZonesEl) return;
+                algoZonesEl.innerHTML = ALGO_ORDER.map(z => {
+                    const lines = z.lines.map(line => {
+                        const m = line.match(/^(\d{2})\s+([A-Z])\s+(.*)$/);
+                        if (!m) return `<div>${line}</div>`;
+                        return `<div><span class="algo-key">${m[2]}</span> ${m[1]} ${m[3]}</div>`;
+                    }).join('');
+                    return `<div class="algo-zone">
+                        <div class="algo-zone-name"><span class="zone-tag">${z.zone}区</span>${z.name}</div>
+                        <div class="algo-zone-lines">${lines}</div>
+                    </div>`;
+                }).join('');
+            }
+            function renderAlgoPanel() {
+                if (!algoPanel) return;
+                algoBody.textContent = algoTextForCurrent();
+                renderAlgoZones();
+            }
+            function showAlgo() {
+                algoVisible = true;
+                if (algoPanel) algoPanel.classList.add('open');
+            }
+            // 程序化弹开时，抑制紧接着的一次外部点击，避免刚弹开就被关闭
+            let algoSuppressOutsideUntil = 0;
+            function hideAlgo() {
+                algoVisible = false;
+                if (algoPanel) algoPanel.classList.remove('open');
+            }
+            function toggleAlgo() { algoVisible ? hideAlgo() : showAlgo(); }
+            function openAlgoWithCurrent() {
+                renderAlgoPanel();
+                showAlgo();
+                algoSuppressOutsideUntil = Date.now() + 350;
+            }
+
+            // 折叠 / 展开分区对照
+            function toggleZonesFold() {
+                zonesCollapsed = !zonesCollapsed;
+                if (algoZonesEl) algoZonesEl.classList.toggle('hidden', zonesCollapsed);
+                if (algoZonesTitle) algoZonesTitle.classList.toggle('collapsed', zonesCollapsed);
+            }
+
+            // ---- 拖拽 + 位置记忆 ----
+            function applyAlgoPos() {
+                if (!algoPanel) return;
+                try {
+                    const raw = localStorage.getItem(ALGO_POS_KEY);
+                    if (!raw) return;
+                    const pos = JSON.parse(raw);
+                    if (typeof pos.left === 'number' && typeof pos.top === 'number') {
+                        const maxL = window.innerWidth - algoPanel.offsetWidth - 8;
+                        const maxT = window.innerHeight - 60;
+                        const left = Math.max(8, Math.min(pos.left, maxL));
+                        const top = Math.max(8, Math.min(pos.top, maxT));
+                        algoPanel.style.left = left + 'px';
+                        algoPanel.style.top = top + 'px';
+                        algoPanel.style.right = 'auto';
+                        algoPanel.style.bottom = 'auto';
+                    }
+                } catch (e) { /* ignore */ }
+            }
+            function saveAlgoPos() {
+                if (!algoPanel) return;
+                const r = algoPanel.getBoundingClientRect();
+                try { localStorage.setItem(ALGO_POS_KEY, JSON.stringify({ left: r.left, top: r.top })); }
+                catch (e) { /* ignore */ }
+            }
+            function initAlgoDrag() {
+                if (!algoCardHead || !algoPanel) return;
+                let dragging = false, startX = 0, startY = 0, originLeft = 0, originTop = 0;
+                const onDown = (e) => {
+                    if (e.target === algoCloseBtn) return;
+                    const point = e.touches ? e.touches[0] : e;
+                    dragging = true;
+                    startX = point.clientX;
+                    startY = point.clientY;
+                    const r = algoPanel.getBoundingClientRect();
+                    originLeft = r.left;
+                    originTop = r.top;
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                    document.addEventListener('touchmove', onMove, { passive: false });
+                    document.addEventListener('touchend', onUp);
+                    e.preventDefault();
+                };
+                const onMove = (e) => {
+                    if (!dragging) return;
+                    const point = e.touches ? e.touches[0] : e;
+                    let left = originLeft + (point.clientX - startX);
+                    let top = originTop + (point.clientY - startY);
+                    const maxL = window.innerWidth - algoPanel.offsetWidth;
+                    const maxT = window.innerHeight - algoPanel.offsetHeight;
+                    left = Math.max(0, Math.min(left, maxL));
+                    top = Math.max(0, Math.min(top, maxT));
+                    algoPanel.style.left = left + 'px';
+                    algoPanel.style.top = top + 'px';
+                    algoPanel.style.right = 'auto';
+                    algoPanel.style.bottom = 'auto';
+                    if (e.cancelable) e.preventDefault();
+                };
+                const onUp = () => {
+                    if (!dragging) return;
+                    dragging = false;
+                    saveAlgoPos();
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    document.removeEventListener('touchmove', onMove);
+                    document.removeEventListener('touchend', onUp);
+                };
+                algoCardHead.addEventListener('mousedown', onDown);
+                algoCardHead.addEventListener('touchstart', onDown, { passive: false });
+            }
+
+            // ---- 弱点（错题本）面板 ----
+            function updateWeakPanel() {
+                if (!weakPanel || !weakList) return;
+                const items = Array.from(wrongBook.entries())
+                    .sort((a, b) => b[1] - a[1]).slice(0, 10);
+                if (items.length === 0) {
+                    weakPanel.classList.remove('show');
+                    weakList.innerHTML = '';
+                    return;
+                }
+                weakPanel.classList.add('show');
+                weakList.innerHTML = items.map(([root, n]) => {
+                    const key = primaryKeyOfRoot(root);
+                    if (key) {
+                        const zone = KEY_TO_ZONE[key] || '?';
+                        return `<span class="weak-chip" title="${zone}区 ${key}键">${root} ×${n}</span>`;
+                    }
+                    // 拆字模式下的错字
+                    const c = CHAR_DATA.find(x => x.ch === root);
+                    const tip = c ? `拆字 ${c.keys}` : '拆字';
+                    return `<span class="weak-chip" title="${tip}">${root} ×${n}</span>`;
+                }).join('');
+            }
+
+            function randomItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+            function getAvailableRoots() {
+                const roots = [];
+                for (const root of ALL_ROOTS) {
+                    // 只要该字根所属的任一键在所选区内，就纳入题库
+                    const keys = keysOfRoot(root);
+                    if (keys.some(k => selectedZones.has(KEY_TO_ZONE[k]))) roots.push(root);
+                }
+                return roots;
+            }
+            function getAvailableKeys() {
+                const keys = [];
+                for (const key of ALL_KEYS) {
+                    if (selectedZones.has(KEY_TO_ZONE[key])) keys.push(key);
+                }
+                return keys;
+            }
+            function updateStats() {
+                correctSpan.textContent = correctCount;
+                wrongSpan.textContent = wrongCount;
+                const total = correctCount + wrongCount;
+                const acc = total === 0 ? 0 : Math.round((correctCount / total) * 100);
+                accuracySpan.textContent = acc + '%';
+            }
+            function resetInput() {
+                answerInput.value = '';
+                answerInput.classList.remove('correct', 'wrong');
+                answerInput.disabled = false;
+                answerInput.focus();
+                answered = false;
+            }
+            function generateQuestion(preferWeak) {
+                const availableRoots = getAvailableRoots();
+                const availableKeys = getAvailableKeys();
+                if (availableRoots.length === 0 || availableKeys.length === 0) {
+                    selectedZones = new Set([1,2,3,4,5]);
+                    syncZoneButtons();
+                    return generateQuestion(preferWeak);
+                }
+                if (currentMode === 'typeChar') {
+                    const chars = getAvailableChars();
+                    if (chars.length === 0) {
+                        selectedZones = new Set([1,2,3,4,5]);
+                        syncZoneButtons();
+                        return generateQuestion(preferWeak);
+                    }
+                    const c = randomItem(chars);
+                    currentQuestion = { type: 'char', ch: c.ch, keys: c.keys };
+                } else if (currentMode === 'rootToKey') {
+                    // 间隔重复：优先抽取错题本中的字根
+                    let picked = null;
+                    if (!preferWeak && wrongBook.size > 0) {
+                        const weak = availableRoots.filter(r => wrongBook.has(r));
+                        if (weak.length > 0 && Math.random() < 0.45) picked = randomItem(weak);
+                    }
+                    currentQuestion = { type: 'root', root: picked || randomItem(availableRoots) };
+                } else {
+                    // 字母->字根：优先抽取错题本中涉及的键
+                    let pickedKey = null;
+                    if (!preferWeak && wrongBook.size > 0) {
+                        const weakKeys = availableKeys.filter(k => {
+                            for (const r of wrongBook) {
+                                if (keysOfRoot(r).includes(k)) return true;
+                            }
+                            return false;
+                        });
+                        if (weakKeys.length > 0 && Math.random() < 0.45) pickedKey = randomItem(weakKeys);
+                    }
+                    currentQuestion = { type: 'key', key: pickedKey || randomItem(availableKeys) };
+                }
+                renderQuestion();
+            }
+            function renderQuestion() {
+                if (!currentQuestion) return;
+                answerInput.dataset.mode = currentMode;
+                if (currentQuestion.type === 'root') {
+                    promptLabel.textContent = '请打出对应的字母键';
+                    promptContent.textContent = currentQuestion.root;
+                    answerInput.placeholder = '输入字母...';
+                    const keys = keysOfRoot(currentQuestion.root);
+                    const zone = KEY_TO_ZONE[keys[0]];
+                    hintText.textContent = `所在区域：${zone}区 · ${ZONE_DATA[zone]?.name || ''}`;
+                } else if (currentQuestion.type === 'char') {
+                    promptLabel.textContent = `拆字打字：按笔顺依次打出 ${currentQuestion.keys.length} 个键`;
+                    promptContent.textContent = currentQuestion.ch;
+                    answerInput.placeholder = `输入 ${currentQuestion.keys.length} 个字母...`;
+                    hintText.textContent = `共 ${currentQuestion.keys.length} 键 · 输入完整字母序列后回车`;
+                } else {
+                    promptLabel.textContent = '请写出一个该键位对应的字根';
+                    promptContent.textContent = currentQuestion.key;
+                    answerInput.placeholder = '输入字根...';
+                    const zone = KEY_TO_ZONE[currentQuestion.key];
+                    hintText.textContent = `所在区域：${zone}区 · ${ZONE_DATA[zone]?.name || ''}  （任意一个正确字根即可）`;
+                }
+                renderAlgoPanel();
+                resetInput();
+                feedback.textContent = '输入后按回车或点击提交';
+                feedback.className = 'feedback';
+            }
+            function checkAnswer() {
+                if (answered) {
+                    feedback.textContent = '⏭ 请点击“下一题”继续练习';
+                    feedback.className = 'feedback';
+                    return;
+                }
+                const userAnswer = answerInput.value.trim();
+                if (userAnswer === '') {
+                    feedback.textContent = '📝 请输入答案';
+                    feedback.className = 'feedback';
+                    return;
+                }
+                let isCorrect = false;
+                let correctAnswerDisplay = '';
+                let algoKey = '';
+                if (currentQuestion.type === 'char') {
+                    const expected = currentQuestion.keys;
+                    const userKeys = userAnswer.toUpperCase().replace(/[^A-Z]/g, '');
+                    isCorrect = (userKeys === expected);
+                    correctAnswerDisplay = expected;
+                    algoKey = expected[0];
+                } else if (currentQuestion.type === 'root') {
+                    const allowedKeys = keysOfRoot(currentQuestion.root);
+                    const userKey = userAnswer.toUpperCase();
+                    isCorrect = allowedKeys.includes(userKey);
+                    correctAnswerDisplay = primaryKeyOfRoot(currentQuestion.root);
+                    algoKey = correctAnswerDisplay;
+                } else {
+                    const key = currentQuestion.key;
+                    const rootsForThisKey = rootsOfKey(key);
+                    isCorrect = rootsForThisKey.includes(userAnswer.trim());
+                    correctAnswerDisplay = rootsForThisKey.length > 0 ? randomItem(rootsForThisKey) : '?';
+                    algoKey = key;
+                }
+                answered = true;
+                answerInput.disabled = true;
+                if (isCorrect) {
+                    correctCount++;
+                    // 答对：降权（连续答对多次则移出错题本）
+                    if (currentQuestion.type === 'root') registerCorrect(currentQuestion.root);
+                    if (currentQuestion.type === 'char') {
+                        if (currentQuestion.keys.length > 1) registerCorrect(currentQuestion.ch);
+                        feedback.textContent = `✅ 正确！“${currentQuestion.ch}” 的拆字编码是 ${correctAnswerDisplay}`;
+                    } else if (currentQuestion.type === 'root') {
+                        const keys = keysOfRoot(currentQuestion.root);
+                        const extra = keys.length > 1 ? `（也可用 ${keys.join('/')}）` : '';
+                        feedback.textContent = `✅ 正确！“${currentQuestion.root}” 对应 ${correctAnswerDisplay}${extra}`;
+                    } else {
+                        feedback.textContent = `✅ 正确！“${currentQuestion.key}” 的一个字根是 “${correctAnswerDisplay}”`;
+                    }
+                    feedback.className = 'feedback correct';
+                    answerInput.classList.add('correct');
+                } else {
+                    wrongCount++;
+                    // 答错：记入错题本
+                    if (currentQuestion.type === 'root') registerWrong(currentQuestion.root);
+                    if (currentQuestion.type === 'char') {
+                        if (currentQuestion.keys.length > 1) registerWrong(currentQuestion.ch);
+                        feedback.textContent = `❌ 错误。“${currentQuestion.ch}” 的正确编码是 ${correctAnswerDisplay}`;
+                    } else if (currentQuestion.type === 'root') {
+                        feedback.textContent = `❌ 错误。正确答案是 ${correctAnswerDisplay}（${KEY_TO_ZONE[correctAnswerDisplay]}区）`;
+                    } else {
+                        feedback.textContent = `❌ 错误。“${currentQuestion.key}” 的一个字根是 “${correctAnswerDisplay}”`;
+                    }
+                    feedback.className = 'feedback wrong';
+                    answerInput.classList.add('wrong');
+                    // 答错自动弹出对应口诀
+                    openAlgoWithCurrent();
+                }
+                updateStats();
+                updateWeakPanel();
+                answerInput.focus();
+            }
+            function nextQuestion() { generateQuestion(); }
+            function resetStats() {
+                correctCount = 0;
+                wrongCount = 0;
+                wrongBook = new Map();
+                saveWrongBook();
+                updateStats();
+                updateWeakPanel();
+                feedback.textContent = '统计与错题本已重置';
+                feedback.className = 'feedback';
+                generateQuestion();
+            }
+            function syncZoneButtons() {
+                zoneBtns.forEach(btn => {
+                    const zone = parseInt(btn.dataset.zone);
+                    btn.classList.toggle('active', selectedZones.has(zone));
+                });
+            }
+            function switchMode(mode) {
+                if (mode === currentMode) return;
+                currentMode = mode;
+                modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+                correctCount = 0;
+                wrongCount = 0;
+                updateStats();
+                generateQuestion();
+            }
+
+            // ============================================================
+            //  事件绑定
+            // ============================================================
+            zoneBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const zone = parseInt(btn.dataset.zone);
+                    if (selectedZones.has(zone)) {
+                        if (selectedZones.size === 1) {
+                            feedback.textContent = '⚠️ 至少需要选择一个区域';
+                            feedback.className = 'feedback';
+                            return;
+                        }
+                        selectedZones.delete(zone);
+                    } else {
+                        selectedZones.add(zone);
+                    }
+                    syncZoneButtons();
+                    generateQuestion();
+                    ensureStarted();
+                });
+            });
+
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    switchMode(btn.dataset.mode);
+                    ensureStarted();
+                });
+            });
+
+            submitBtn.addEventListener('click', () => { ensureStarted(); checkAnswer(); });
+
+            answerInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    ensureStarted();
+                    if (answered) nextQuestion();
+                    else checkAnswer();
+                }
+            });
+
+            answerInput.addEventListener('input', ensureStarted);
+
+            nextBtn.addEventListener('click', () => { ensureStarted(); nextQuestion(); });
+            resetStatsBtn.addEventListener('click', () => { ensureStarted(); resetStats(); });
+
+            if (algoFab) {
+                algoFab.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    ensureStarted();
+                    toggleAlgo();
+                });
+            }
+            if (algoCloseBtn) {
+                algoCloseBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    hideAlgo();
+                });
+            }
+            if (algoZonesTitle) {
+                algoZonesTitle.addEventListener('click', toggleZonesFold);
+            }
+            // 点击悬浮区域（卡片/按钮）以外的位置自动关闭
+            document.addEventListener('click', (e) => {
+                if (!algoVisible) return;
+                if (Date.now() < algoSuppressOutsideUntil) return;
+                const t = e.target;
+                if (algoPanel && algoPanel.contains(t)) return;
+                if (algoFab && algoFab.contains(t)) return;
+                hideAlgo();
+            });
+            initAlgoDrag();
+
+            pauseBtn.addEventListener('click', () => toggleTimer());
+
+            clearTimeBtn.addEventListener('click', () => {
+                if (!confirm('确定要清空所有练习时间记录吗？此操作不可撤销。')) return;
+                saveRecord({});
+                sessionSeconds = 0;
+                pendingSeconds = 0;
+                pendingDate = null;
+                hasStarted = false;
+                userPaused = false;
+                idlePaused = false;
+                hiddenPaused = false;
+                timerRunning = false;
+                updateTimerUI();
+                renderTimePanel();
+                renderWeekChart();
+            });
+
+            // ============================================================
+            //  初始化
+            // ============================================================
+            function init() {
+                pruneOldRecords();
+                wrongBook = loadWrongBook();
+                currentMode = 'rootToKey';
+                selectedZones = new Set([1,2,3,4,5]);
+                syncZoneButtons();
+                generateQuestion();
+                updateStats();
+                updateWeakPanel();
+                updateTimerUI();
+                renderTimePanel();
+                renderWeekChart();
+                startTickLoop();
+                applyAlgoPos();
+                lastActivityTime = Date.now();
+                answerInput.focus();
+            }
+
+            init();
+        })();
+    </script>
+</body>
+</html>
